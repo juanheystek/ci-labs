@@ -3,10 +3,27 @@ name: Node.js CI
 on:
   push:
     branches: [main]
+    paths:
+      - '*.js'
+      - 'package.json'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: 'Log verbosity'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - debug
+          - warn
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,3 +38,12 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: dist/
+
+      - name: Show log level
+        run: echo "Log level is ${{ github.event.inputs.log_level || 'not set' }}"
