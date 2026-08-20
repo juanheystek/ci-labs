@@ -19,33 +19,33 @@ jobs:
       - run: echo "Checking ${{ env.APP_NAME }} style..."
 
   test:
-    name: Run Tests
-    runs-on: ubuntu-latest
+    name: Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }} # This changes per job!
+    strategy:
+      fail-fast: false # If Windows fails, don't stop the Linux job
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: ['18', '20']
+
     steps:
       - uses: actions/checkout@v4
 
-      # NEW: Caching Step
-      - name: Cache node modules
-        uses: actions/cache@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ~/.npm # Where npm stores the downloaded files
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm' # Shortcut for the cache we did in Lab 6!
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          
       - name: Install dependencies
-        run: npm ci # This is cleaner than 'npm install' for CI
+        run: npm ci
         
-      - run: npm test
-
+      - name: Run tests
+        run: npm test
+        
   build:
     name: Build Application
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test] # GitHub is smart enough to wait for the whole matrix
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
