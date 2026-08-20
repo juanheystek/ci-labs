@@ -1,71 +1,21 @@
-name: Multi-Job CI
+name: Main CI
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# NEW: Global variables
-env:
-  APP_NAME: ci-labs
-  NODE_VERSION: '20'
-
 jobs:
-  lint:
-    name: Lint Code
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: echo "Checking ${{ env.APP_NAME }} style..."
+  # Call the reusable workflow for Node 20
+  build-node-20:
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      node-version: '20'
+      run-lint: true
 
-  test:
-    name: Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
-    runs-on: ${{ matrix.os }} # This changes per job!
-    strategy:
-      fail-fast: false # If Windows fails, don't stop the Linux job
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        node-version: ['18', '20']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm' # Shortcut for the cache we did in Lab 6!
-
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Run tests
-        run: npm test
-        
-  build:
-    name: Build Application
-    runs-on: ubuntu-latest
-    needs: [lint, test] # GitHub is smart enough to wait for the whole matrix
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }} # Using the variable!
-      - run: npm run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-artifact
-          path: dist/
-
-  notify:
-    name: Deploy Notification
-    runs-on: ubuntu-latest
-    needs: [build]
-    environment: production # This links to the approval gate we will create!
-    steps:
-      - name: Use secret
-        run: |
-          echo "Deploying ${{ env.APP_NAME }}..."
-          echo "Token length is ${#DEPLOY_TOKEN} characters"
-        env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+  # Call the EXACT SAME template again, but for Node 18 and no linting!
+  build-node-18:
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      node-version: '18'
+      run-lint: false
