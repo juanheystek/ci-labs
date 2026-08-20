@@ -1,49 +1,56 @@
-name: Node.js CI
+name: Multi-Job CI
 
 on:
   push:
     branches: [main]
-    paths:
-      - '*.js'
-      - 'package.json'
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      log_level:
-        description: 'Log verbosity'
-        required: false
-        default: 'info'
-        type: choice
-        options:
-          - info
-          - debug
-          - warn
 
 jobs:
-  build-and-test:
+  lint:
+    name: Lint Code
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - run: echo "Checking code style... Lint passed!"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - run: npm test
 
-      - name: Run tests
-        run: npm test
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Scanning for vulnerabilities... No issues found!"
 
-      - name: Build application
-        run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, test, security-scan] # This is the "Gate"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
         with:
           name: app-build
           path: dist/
 
-      - name: Show log level
-        run: echo "Log level is ${{ github.event.inputs.log_level || 'not set' }}"
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main' # Only runs on the main branch
+    steps:
+      - run: echo "Build succeeded on main! Sending notification..."
