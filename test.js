@@ -9,5 +9,5 @@ function assert(name, actual, expected) {
  }
 }
 
-assert('add 2+3', add(2, 3), 99);
+assert('add 2+3', add(2, 3), 5);
 assert('subtract 5-3', subtract(5, 3), 2);
